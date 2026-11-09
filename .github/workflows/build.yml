@@ -26,3 +26,14 @@ jobs:
           for name in basic cpp20 stdlib; do
             test -f "build/teensy_test_$name.hex"
           done
+
+      - name: Check the unwind tables
+        run: |
+          result=0
+          for elf in build/*.elf; do
+            if arm-none-eabi-readelf -u "$elf" 2>&1 | grep -E "^(arm-none-eabi-)?readelf: (Warning|Error)"; then
+              echo "::error::Corrupt unwind tables in $elf"
+              result=1
+            fi
+          done
+          exit $result
