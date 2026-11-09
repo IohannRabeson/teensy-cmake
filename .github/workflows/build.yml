@@ -1,0 +1,28 @@
+name: Build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        board: [40, 41]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib ninja-build
+
+      - name: Build the tests
+        run: |
+          cmake -S tests -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DTEENSY_BOARD=${{ matrix.board }}
+          cmake --build build
+          for name in basic cpp20 stdlib; do
+            test -f "build/teensy_test_$name.hex"
+          done
