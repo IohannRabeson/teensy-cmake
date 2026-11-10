@@ -1,3 +1,5 @@
+# Flashing uses teensy_loader_cli when it is installed, otherwise the
+# teensy_post_compile tool of Teensyduino.
 find_program(TEENSY_LOADER_CLI teensy_loader_cli HINTS /opt/homebrew/bin /usr/local/bin)
 
 if(NOT TEENSY_LOADER_CLI)
@@ -14,6 +16,7 @@ if(NOT TEENSY_LOADER_CLI)
         file(GLOB candidates LIST_DIRECTORIES true ${root}/tools/teensy-tools/*)
         list(APPEND TEENSY_TOOLS_CANDIDATES ${candidates})
     endforeach()
+    # The newest Teensyduino version first.
     list(SORT TEENSY_TOOLS_CANDIDATES COMPARE NATURAL ORDER DESCENDING)
     find_program(TEENSY_POST_COMPILE teensy_post_compile HINTS ${TEENSY_TOOLS_CANDIDATES} NO_DEFAULT_PATH)
 endif()
@@ -29,12 +32,17 @@ endif()
 function(teensy_add_flash_target name)
     get_property(board_name GLOBAL PROPERTY TEENSY_BOARD_NAME)
     if(TEENSY_LOADER_CLI)
+        # -w waits for the board to enter its bootloader (press its button),
+        # -v prints the progress.
         add_custom_target(${name}_flash
             COMMAND ${TEENSY_LOADER_CLI} --mcu=${board_name} -w -v $<TARGET_FILE_DIR:${name}>/${name}.hex
             DEPENDS ${name}
             USES_TERMINAL
         )
     elseif(TEENSY_POST_COMPILE)
+        # teensy_post_compile hands the .hex to the Teensy Loader application,
+        # -reboot asks the running firmware to reboot into the bootloader.
+        # nohup keeps it alive when CLion closes the terminal of the target.
         cmake_path(GET TEENSY_POST_COMPILE PARENT_PATH tools)
         add_custom_target(${name}_flash
             COMMAND $<$<BOOL:${CMAKE_HOST_UNIX}>:nohup> ${TEENSY_POST_COMPILE} -file=${name} -path=$<TARGET_FILE_DIR:${name}> -tools=${tools} -board=${board_name} -reboot

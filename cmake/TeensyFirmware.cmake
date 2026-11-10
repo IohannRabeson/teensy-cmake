@@ -1,6 +1,7 @@
 set_property(GLOBAL PROPERTY TEENSY_SIZE_SCRIPT ${CMAKE_CURRENT_LIST_DIR}/TeensySize.cmake)
 
 function(teensy_add_firmware name)
+    # USB_TYPE is optional, the other arguments are the sources.
     cmake_parse_arguments(PARSE_ARGV 1 firmware "" "USB_TYPE" "")
     if(NOT firmware_USB_TYPE)
         set(firmware_USB_TYPE ${TEENSY_USB_TYPE})
@@ -14,7 +15,11 @@ function(teensy_add_firmware name)
     set_target_properties(${name} PROPERTIES SUFFIX .elf)
     target_link_options(${name} PRIVATE -Wl,-Map=$<TARGET_FILE_DIR:${name}>/${name}.map)
     add_custom_command(TARGET ${name} POST_BUILD
+        # The .hex is what the loaders flash. -R .eeprom is copied from
+        # Teensyduino.
         COMMAND ${CMAKE_OBJCOPY} -O ihex -R .eeprom $<TARGET_FILE:${name}> $<TARGET_FILE_DIR:${name}>/${name}.hex
+        # TeensySize.cmake runs as a script (-P) at build time, its inputs are
+        # passed as -D variables.
         COMMAND ${CMAKE_COMMAND} -DREADELF=${CMAKE_READELF} -DELF=$<TARGET_FILE:${name}> -DLINKER_SCRIPT=${linker_script} -DNAME=${name} -DBOARD=${board_version} -P ${size_script}
         COMMENT "Writing ${name}.hex and reporting its memory usage"
     )
