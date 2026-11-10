@@ -9,7 +9,7 @@ elseif(TEENSY_BOARD STREQUAL 41)
 else()
     message(FATAL_ERROR "TEENSY_BOARD must be 40 or 41, not '${TEENSY_BOARD}'")
 endif()
-set(TEENSY_BOARD_NAME TEENSY${TEENSY_BOARD} CACHE INTERNAL "")
+set_property(GLOBAL PROPERTY TEENSY_BOARD_NAME TEENSY${TEENSY_BOARD})
 
 set(TEENSY_USB_TYPES
     SERIAL
@@ -34,8 +34,8 @@ set(TEENSY_USB_TYPES
     RAWHID
     FLIGHTSIM
     FLIGHTSIM_JOYSTICK
-    CACHE INTERNAL ""
 )
+set_property(GLOBAL PROPERTY TEENSY_USB_TYPES ${TEENSY_USB_TYPES})
 set(TEENSY_USB_TYPE SERIAL CACHE STRING "USB type of the firmwares that do not choose one")
 set_property(CACHE TEENSY_USB_TYPE PROPERTY STRINGS ${TEENSY_USB_TYPES})
 
@@ -103,22 +103,27 @@ file(GLOB TEENSY_CORE_SOURCES CONFIGURE_DEPENDS
     ${TEENSY_CORE_DIR}/*.cpp
     ${TEENSY_CORE_DIR}/*.S
 )
-set(TEENSY_CORE_SOURCES ${TEENSY_CORE_SOURCES} CACHE INTERNAL "")
-set(TEENSY_CORE_DIR ${TEENSY_CORE_DIR} CACHE INTERNAL "")
-set(TEENSY_LINKER_SCRIPT ${TEENSY_LINKER_SCRIPT} CACHE INTERNAL "")
+set_property(GLOBAL PROPERTY TEENSY_CORE_SOURCES ${TEENSY_CORE_SOURCES})
+set_property(GLOBAL PROPERTY TEENSY_CORE_DIR ${TEENSY_CORE_DIR})
+set_property(GLOBAL PROPERTY TEENSY_LINKER_SCRIPT ${TEENSY_LINKER_SCRIPT})
 
 function(teensy_core_target usb_type out)
-    if(NOT usb_type IN_LIST TEENSY_USB_TYPES)
-        message(FATAL_ERROR "Unknown Teensy USB type '${usb_type}', expected one of: ${TEENSY_USB_TYPES}")
+    get_property(usb_types GLOBAL PROPERTY TEENSY_USB_TYPES)
+    if(NOT usb_type IN_LIST usb_types)
+        message(FATAL_ERROR "Unknown Teensy USB type '${usb_type}', expected one of: ${usb_types}")
     endif()
     string(TOLOWER ${usb_type} suffix)
     set(target teensy_core_${suffix})
     if(NOT TARGET ${target})
-        add_library(${target} STATIC ${TEENSY_CORE_SOURCES})
-        target_include_directories(${target} SYSTEM PUBLIC ${TEENSY_CORE_DIR})
+        get_property(sources GLOBAL PROPERTY TEENSY_CORE_SOURCES)
+        get_property(core_dir GLOBAL PROPERTY TEENSY_CORE_DIR)
+        get_property(linker_script GLOBAL PROPERTY TEENSY_LINKER_SCRIPT)
+        get_property(board_name GLOBAL PROPERTY TEENSY_BOARD_NAME)
+        add_library(${target} STATIC ${sources})
+        target_include_directories(${target} SYSTEM PUBLIC ${core_dir})
         target_compile_definitions(${target} PUBLIC
             __IMXRT1062__
-            ARDUINO_${TEENSY_BOARD_NAME}
+            ARDUINO_${board_name}
             TEENSYDUINO=160
             ARDUINO=10819
             F_CPU=600000000
@@ -136,12 +141,12 @@ function(teensy_core_target usb_type out)
             $<$<COMPILE_LANGUAGE:ASM>:-x assembler-with-cpp>
         )
         target_link_options(${target} INTERFACE
-            -T${TEENSY_LINKER_SCRIPT}
+            -T${linker_script}
             -Wl,--relax
             -Wl,--no-warn-rwx-segments
         )
         target_link_libraries(${target} INTERFACE m stdc++)
-        set_target_properties(${target} PROPERTIES INTERFACE_LINK_DEPENDS ${TEENSY_LINKER_SCRIPT})
+        set_target_properties(${target} PROPERTIES INTERFACE_LINK_DEPENDS ${linker_script})
     endif()
     set(${out} ${target} PARENT_SCOPE)
 endfunction()

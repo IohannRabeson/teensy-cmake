@@ -27,16 +27,17 @@ else()
 endif()
 
 function(teensy_add_flash_target name)
+    get_property(board_name GLOBAL PROPERTY TEENSY_BOARD_NAME)
     if(TEENSY_LOADER_CLI)
         add_custom_target(${name}_flash
-            COMMAND ${TEENSY_LOADER_CLI} --mcu=${TEENSY_BOARD_NAME} -w -v $<TARGET_FILE_DIR:${name}>/${name}.hex
+            COMMAND ${TEENSY_LOADER_CLI} --mcu=${board_name} -w -v $<TARGET_FILE_DIR:${name}>/${name}.hex
             DEPENDS ${name}
             USES_TERMINAL
         )
     elseif(TEENSY_POST_COMPILE)
         cmake_path(GET TEENSY_POST_COMPILE PARENT_PATH tools)
         add_custom_target(${name}_flash
-            COMMAND $<$<BOOL:${CMAKE_HOST_UNIX}>:nohup> ${TEENSY_POST_COMPILE} -file=${name} -path=$<TARGET_FILE_DIR:${name}> -tools=${tools} -board=${TEENSY_BOARD_NAME} -reboot
+            COMMAND $<$<BOOL:${CMAKE_HOST_UNIX}>:nohup> ${TEENSY_POST_COMPILE} -file=${name} -path=$<TARGET_FILE_DIR:${name}> -tools=${tools} -board=${board_name} -reboot
             DEPENDS ${name}
         )
     endif()
