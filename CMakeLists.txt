@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.25)
 
+# Built alone, teensy-cmake uses its own toolchain. A project that adds it with
+# add_subdirectory() must set the toolchain before its own project().
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR AND NOT CMAKE_TOOLCHAIN_FILE)
     set(CMAKE_TOOLCHAIN_FILE ${CMAKE_CURRENT_SOURCE_DIR}/cmake/toolchain.cmake)
 endif()
