@@ -18,6 +18,7 @@ set_property(GLOBAL PROPERTY TEENSY_BOARD_NAME TEENSY${TEENSY_BOARD})
 set_property(GLOBAL PROPERTY TEENSY_BOARD_VERSION ${TEENSY_BOARD_VERSION})
 
 set(TEENSY_CORES_TAG 1.62 CACHE STRING "Tag or commit of PaulStoffregen/cores")
+set(TEENSY_TEENSYDUINO 160 CACHE STRING "Value of the TEENSYDUINO define")
 
 # Default folder for the downloaded core: $XDG_CACHE_HOME or ~/.cache on Linux
 # and macOS, %LOCALAPPDATA% on Windows.
@@ -129,7 +130,7 @@ function(teensy_core_target usb_type out)
         target_compile_definitions(${target} PUBLIC
             __IMXRT1062__
             ARDUINO_${board_name}
-            TEENSYDUINO=160
+            TEENSYDUINO=${TEENSY_TEENSYDUINO}
             ARDUINO=10819
             F_CPU=600000000
             USB_${usb_type}
