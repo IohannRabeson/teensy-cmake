@@ -9,7 +9,6 @@ find_program(CMAKE_C_COMPILER arm-none-eabi-gcc HINTS ${TEENSY_ARM_TOOLCHAIN_HIN
 find_program(CMAKE_CXX_COMPILER arm-none-eabi-g++ HINTS ${TEENSY_ARM_TOOLCHAIN_HINTS} REQUIRED)
 cmake_path(GET CMAKE_C_COMPILER PARENT_PATH TEENSY_ARM_TOOLCHAIN_DIR)
 find_program(CMAKE_OBJCOPY arm-none-eabi-objcopy HINTS ${TEENSY_ARM_TOOLCHAIN_DIR} REQUIRED)
-find_program(CMAKE_SIZE arm-none-eabi-size HINTS ${TEENSY_ARM_TOOLCHAIN_DIR})
 
 set(CMAKE_C_FLAGS_INIT "-mthumb -mcpu=cortex-m7 -mfloat-abi=hard -mfpu=fpv5-d16 -ffunction-sections -fdata-sections")
 set(CMAKE_CXX_FLAGS_INIT "${CMAKE_C_FLAGS_INIT}")
