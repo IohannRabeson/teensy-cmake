@@ -23,7 +23,7 @@ jobs:
         run: |
           cmake -S tests -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DTEENSY_BOARD=${{ matrix.board }}
           cmake --build build
-          for name in basic cpp20 stdlib; do
+          for name in basic cpp20 midi stdlib; do
             test -f "build/teensy_test_$name.hex"
           done
 

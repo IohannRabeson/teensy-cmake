@@ -9,7 +9,35 @@ elseif(TEENSY_BOARD STREQUAL 41)
 else()
     message(FATAL_ERROR "TEENSY_BOARD must be 40 or 41, not '${TEENSY_BOARD}'")
 endif()
-set(TEENSY_BOARD_NAME TEENSY${TEENSY_BOARD})
+set(TEENSY_BOARD_NAME TEENSY${TEENSY_BOARD} CACHE INTERNAL "")
+
+set(TEENSY_USB_TYPES
+    SERIAL
+    DUAL_SERIAL
+    TRIPLE_SERIAL
+    KEYBOARDONLY
+    TOUCHSCREEN
+    HID_TOUCHSCREEN
+    HID
+    SERIAL_HID
+    MIDI
+    MIDI4
+    MIDI16
+    MIDI_SERIAL
+    MIDI4_SERIAL
+    MIDI16_SERIAL
+    AUDIO
+    MIDI_AUDIO_SERIAL
+    MIDI16_AUDIO_SERIAL
+    MTPDISK
+    MTPDISK_SERIAL
+    RAWHID
+    FLIGHTSIM
+    FLIGHTSIM_JOYSTICK
+    CACHE INTERNAL ""
+)
+set(TEENSY_USB_TYPE SERIAL CACHE STRING "USB type of the firmwares that do not choose one")
+set_property(CACHE TEENSY_USB_TYPE PROPERTY STRINGS ${TEENSY_USB_TYPES})
 
 set(TEENSY_CORES_TAG 1.62 CACHE STRING "Tag or commit of PaulStoffregen/cores")
 
@@ -75,36 +103,48 @@ file(GLOB TEENSY_CORE_SOURCES CONFIGURE_DEPENDS
     ${TEENSY_CORE_DIR}/*.cpp
     ${TEENSY_CORE_DIR}/*.S
 )
+set(TEENSY_CORE_SOURCES ${TEENSY_CORE_SOURCES} CACHE INTERNAL "")
+set(TEENSY_CORE_DIR ${TEENSY_CORE_DIR} CACHE INTERNAL "")
+set(TEENSY_LINKER_SCRIPT ${TEENSY_LINKER_SCRIPT} CACHE INTERNAL "")
 
-add_library(teensy_core STATIC ${TEENSY_CORE_SOURCES})
-add_library(teensy::core ALIAS teensy_core)
-target_include_directories(teensy_core SYSTEM PUBLIC ${TEENSY_CORE_DIR})
-target_compile_definitions(teensy_core PUBLIC
-    __IMXRT1062__
-    ARDUINO_${TEENSY_BOARD_NAME}
-    TEENSYDUINO=160
-    ARDUINO=10819
-    F_CPU=600000000
-    USB_SERIAL
-    LAYOUT_US_ENGLISH
-)
-set_target_properties(teensy_core PROPERTIES
-    CXX_STANDARD 17
-    CXX_STANDARD_REQUIRED ON
-    CXX_EXTENSIONS ON
-)
-target_compile_options(teensy_core PRIVATE
-    -O2
-    $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fpermissive -fno-rtti -fno-threadsafe-statics -felide-constructors -Wno-error=narrowing -Wno-psabi -Wno-maybe-uninitialized>
-    $<$<COMPILE_LANGUAGE:ASM>:-x assembler-with-cpp>
-)
-target_link_options(teensy_core INTERFACE
-    -T${TEENSY_LINKER_SCRIPT}
-    -Wl,--relax
-    -Wl,--no-warn-rwx-segments
-)
-target_link_libraries(teensy_core INTERFACE m stdc++)
-set_target_properties(teensy_core PROPERTIES
-    INTERFACE_LINK_DEPENDS ${TEENSY_LINKER_SCRIPT}
-    TEENSY_BOARD_NAME ${TEENSY_BOARD_NAME}
-)
+function(teensy_core_target usb_type out)
+    if(NOT usb_type IN_LIST TEENSY_USB_TYPES)
+        message(FATAL_ERROR "Unknown Teensy USB type '${usb_type}', expected one of: ${TEENSY_USB_TYPES}")
+    endif()
+    string(TOLOWER ${usb_type} suffix)
+    set(target teensy_core_${suffix})
+    if(NOT TARGET ${target})
+        add_library(${target} STATIC ${TEENSY_CORE_SOURCES})
+        target_include_directories(${target} SYSTEM PUBLIC ${TEENSY_CORE_DIR})
+        target_compile_definitions(${target} PUBLIC
+            __IMXRT1062__
+            ARDUINO_${TEENSY_BOARD_NAME}
+            TEENSYDUINO=160
+            ARDUINO=10819
+            F_CPU=600000000
+            USB_${usb_type}
+            LAYOUT_US_ENGLISH
+        )
+        set_target_properties(${target} PROPERTIES
+            CXX_STANDARD 17
+            CXX_STANDARD_REQUIRED ON
+            CXX_EXTENSIONS ON
+        )
+        target_compile_options(${target} PRIVATE
+            -O2
+            $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fpermissive -fno-rtti -fno-threadsafe-statics -felide-constructors -Wno-error=narrowing -Wno-psabi -Wno-maybe-uninitialized>
+            $<$<COMPILE_LANGUAGE:ASM>:-x assembler-with-cpp>
+        )
+        target_link_options(${target} INTERFACE
+            -T${TEENSY_LINKER_SCRIPT}
+            -Wl,--relax
+            -Wl,--no-warn-rwx-segments
+        )
+        target_link_libraries(${target} INTERFACE m stdc++)
+        set_target_properties(${target} PROPERTIES INTERFACE_LINK_DEPENDS ${TEENSY_LINKER_SCRIPT})
+    endif()
+    set(${out} ${target} PARENT_SCOPE)
+endfunction()
+
+teensy_core_target(${TEENSY_USB_TYPE} TEENSY_DEFAULT_CORE)
+add_library(teensy::core ALIAS ${TEENSY_DEFAULT_CORE})

@@ -16,3 +16,5 @@ teensy_add_firmware(teensy_test_cpp20 cpp20.cpp)
 target_compile_features(teensy_test_cpp20 PRIVATE cxx_std_20)
 
 teensy_add_firmware(teensy_test_stdlib stdlib.cpp)
+
+teensy_add_firmware(teensy_test_midi USB_TYPE MIDI_SERIAL midi.cpp)
