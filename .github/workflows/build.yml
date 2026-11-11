@@ -7,20 +7,40 @@ on:
 jobs:
   build:
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
         board: [40, 41]
+    env:
+      ARM_TOOLCHAIN_VERSION: 15.3.rel2
+      ARM_TOOLCHAIN_SHA256: 463df9665c246fa13bab2102115bbf83440661b6eb70b44f3dfd4712ca30037a
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+
+      - name: Restore the toolchain
+        id: toolchain
+        uses: actions/cache@v6
+        with:
+          path: ~/arm-gnu-toolchain
+          key: arm-gnu-toolchain-${{ env.ARM_TOOLCHAIN_VERSION }}-x86_64
+
+      - name: Download the toolchain
+        if: steps.toolchain.outputs.cache-hit != 'true'
+        run: |
+          archive="arm-gnu-toolchain-$ARM_TOOLCHAIN_VERSION-x86_64-arm-none-eabi.tar.xz"
+          curl -fsSL --retry 3 -o "$archive" "https://gitlab.arm.com/api/v4/projects/tooling%2Fgnu-toolchains-for-arm/packages/generic/gnu-toolchain/$ARM_TOOLCHAIN_VERSION/$archive"
+          echo "$ARM_TOOLCHAIN_SHA256  $archive" | sha256sum -c
+          mkdir -p ~/arm-gnu-toolchain
+          tar -xf "$archive" -C ~/arm-gnu-toolchain --strip-components=1
+          rm "$archive"
 
       - name: Install the toolchain
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib ninja-build
+        run: echo "$HOME/arm-gnu-toolchain/bin" >> "$GITHUB_PATH"
 
       - name: Build the tests
         run: |
+          arm-none-eabi-gcc --version | head -1
           cmake -S tests -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DTEENSY_BOARD=${{ matrix.board }}
           cmake --build build
           for name in basic cpp20 midi stdlib; do
