@@ -45,6 +45,26 @@ teensy_add_firmware(synth USB_TYPE MIDI_SERIAL main.cpp)
 
 The core is compiled once per USB type in use. `teensy::core` is the core of the `TEENSY_USB_TYPE` type.
 
+## Presets
+
+With CMake presets, set the toolchain in the preset instead of the `CMakeLists.txt`:
+
+```json
+{
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "teensy",
+      "binaryDir": "${sourceDir}/build/teensy",
+      "toolchainFile": "${sourceDir}/externals/teensy-cmake/cmake/toolchain.cmake",
+      "cacheVariables": {
+        "TEENSY_BOARD": "40"
+      }
+    }
+  ]
+}
+```
+
 ## Options
 
 | Cache variable | Default | |
