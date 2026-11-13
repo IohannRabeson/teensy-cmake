@@ -37,16 +37,26 @@ function(teensy_add_flash_target name)
         add_custom_target(${name}_flash
             COMMAND ${TEENSY_LOADER_CLI} --mcu=${board_name} -w -v $<TARGET_FILE_DIR:${name}>/${name}.hex
             DEPENDS ${name}
+            COMMENT "Flashing ${name}.hex"
             USES_TERMINAL
         )
     elseif(TEENSY_POST_COMPILE)
         # teensy_post_compile hands the .hex to the Teensy Loader application,
         # -reboot asks the running firmware to reboot into the bootloader.
-        # nohup keeps it alive when CLion closes the terminal of the target.
+        # On Unix, sh ignores SIGHUP before running it (trap), so it stays alive
+        # when CLion closes the terminal of the target. nohup does the same but
+        # hides the output in a nohup.out file. The command and its arguments
+        # are passed to sh as $0 and $@, so they need no quoting.
         cmake_path(GET TEENSY_POST_COMPILE PARENT_PATH tools)
+        set(ignore_hangup)
+        if(CMAKE_HOST_UNIX)
+            set(ignore_hangup sh -c "trap '' HUP && exec \"$0\" \"$@\"")
+        endif()
         add_custom_target(${name}_flash
-            COMMAND $<$<BOOL:${CMAKE_HOST_UNIX}>:nohup> ${TEENSY_POST_COMPILE} -file=${name} -path=$<TARGET_FILE_DIR:${name}> -tools=${tools} -board=${board_name} -reboot
+            COMMAND ${ignore_hangup} ${TEENSY_POST_COMPILE} -file=${name} -path=$<TARGET_FILE_DIR:${name}> -tools=${tools} -board=${board_name} -reboot
             DEPENDS ${name}
+            COMMENT "Flashing ${name}.hex"
+            VERBATIM
         )
     endif()
 endfunction()
